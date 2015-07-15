@@ -1,0 +1,10 @@
+{
+	"ImportPath": "go-git-clone",
+	"GoVersion": "devel",
+	"Deps": [
+		{
+			"ImportPath": "github.com/bargez/pktline",
+			"Rev": "5b3d21bc298513f43c0052b622f6ec6b35c17722"
+		}
+	]
+}
