@@ -1,4 +1,4 @@
-package main
+package git
 
 import (
 	"fmt"
@@ -10,6 +10,7 @@ import (
 
 const (
 	FLUSH_PACKET = "0000"
+	PACKET_SP = " "
 )
 
 type Remote struct {
@@ -38,6 +39,27 @@ func (r *Remote) LsRemote() {
 	}
 }
 
+func (r *Remote) Clone(){
+	conn := r.connect()
+	defer conn.Close()
+	pktLineEder := pktline.NewEncoderDecoder(conn)
+	cmd := r.getCmd("upload-pack")
+	err := pktLineEder.Encode(cmd)
+	if err != nil {
+		panic(err)
+	}
+	pktLines := make([][]byte, 0)
+	err = pktLineEder.DecodeUntilFlush(&pktLines)
+	pktLineEder.Encode(nil)
+	if err != nil {
+		panic(err)
+	}
+	for _, v := range pktLines{
+		fmt.Println(string(v))
+		//first line with capabilities
+	}
+}
+
 func (r *Remote ) getCmd(git_cmd string) []byte {
 	//0032git-upload-pack /git-bottom-up\0Host=localHost\0
 	msg := fmt.Sprintf("git-%s %s\000Host=%s\000", git_cmd, r.Repo, r.Host)
@@ -52,7 +74,7 @@ func (r *Remote) connect() (conn net.Conn) {
 	return
 }
 
-func newRemote(git_url string) *Remote {
+func NewRemote(git_url string) *Remote {
 	gurl, err := url.Parse(git_url)
 	if err != nil {
 		panic(err)

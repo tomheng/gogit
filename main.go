@@ -1,5 +1,9 @@
 package main
 
+import (
+	"github.com/tomheng/go-git-clone/git"
+)
+
 func main() {
 	/*conn, err := net.Dial("tcp", "127.0.0.1:9418")
 	if err != nil {
@@ -20,6 +24,6 @@ func main() {
 		}
 		fmt.Println(string(resp))
 	}*/
-	remote := newRemote("git://127.0.0.1/flybird")
+	remote := git.NewRemote("git://127.0.0.1/flybird")
 	remote.LsRemote()
 }
