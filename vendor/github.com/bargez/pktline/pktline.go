@@ -13,10 +13,10 @@ import (
 
 // Errors returned by methods in package pktline.
 var (
-	ErrShortRead = errors.New("input is too short")
+	ErrShortRead   = errors.New("input is too short")
 	ErrInputExcess = errors.New("input is too long")
-	ErrTooLong = errors.New("too long payload")
-	ErrInvalidLen = errors.New("invalid length")
+	ErrTooLong     = errors.New("too long payload")
+	ErrInvalidLen  = errors.New("invalid length")
 )
 
 const (
@@ -117,7 +117,7 @@ func NewEncoder(w io.Writer) *Encoder {
 
 // Encode encodes payload and writes it to encoder output.
 // If payload is nil, writes flush-pkt.
-func (e *Encoder) Encode(payload []byte) (error) {
+func (e *Encoder) Encode(payload []byte) error {
 	line, err := Encode(payload)
 	if err != nil {
 		return err

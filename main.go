@@ -24,6 +24,11 @@ func main() {
 		}
 		fmt.Println(string(resp))
 	}*/
-	remote := git.NewRemote("git://127.0.0.1/flybird")
-	remote.LsRemote()
+	url := "git://127.0.0.1/flybird"
+	/*remote := git.NewRemote(url)
+	remote.LsRemote()*/
+	//remote.Clone()
+	//git.Clone("git://127.0.0.1/flybird", "")
+	//git.LsRemote("git://127.0.0.1/flybird")
+	git.LsRemote(url)
 }
