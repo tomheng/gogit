@@ -12,4 +12,3 @@ type Object struct {
 	Id       string //SHA-1 40 char
 	SelfType string //commit, blob, tree
 }
-

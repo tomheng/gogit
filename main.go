@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/tomheng/go-git-clone/git"
+	"github.com/tomheng/gogit/git"
 )
 
 func main() {

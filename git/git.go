@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net"
 	"net/url"
+	"strings"
 )
 
 //git clone on addr
@@ -34,8 +35,13 @@ func LsRemote(addr string) {
 		panic(err)
 	}
 	//fmt.Printf("return lines:%d", len(pktLines))
-	for _, line := range pktLines {
-		fmt.Print(line)
+	for i, line := range pktLines {
+		//first line with Capabilities
+		if i == 0 {
+			index := strings.Index(line, "\000")
+			line = line[:index]
+		}
+		fmt.Println(line)
 	}
 }
 

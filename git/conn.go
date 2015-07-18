@@ -3,7 +3,7 @@ package git
 import (
 	"bytes"
 	"net"
-	
+
 	"github.com/bargez/pktline"
 )
 
@@ -31,7 +31,7 @@ func (gconn *GitConn) WritePktLine(line []byte) (int, error) {
 	return len(line), err
 }
 
-//read pktline to conn
+//read pktline from conn
 func (gconn *GitConn) ReadPktLine() ([]string, error) {
 	pktlBytes := make([][]byte, 0)
 	pktLineEder := pktline.NewEncoderDecoder(gconn.conn)
@@ -40,8 +40,8 @@ func (gconn *GitConn) ReadPktLine() ([]string, error) {
 		return nil, err
 	}
 	pktLines := make([]string, len(pktlBytes))
-	for _, v := range pktlBytes {
-		pktLines = append(pktLines, string(v))
+	for i, v := range pktlBytes {
+		pktLines[i] = string(bytes.TrimRight(v, "\r\n"))
 	}
 	return pktLines, err
 }
