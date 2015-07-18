@@ -1,6 +1,6 @@
 package git
 
-import (
+/*import (
 	"bytes"
 	"fmt"
 	"net"
@@ -137,4 +137,4 @@ func NewRemote(git_url string) *Remote {
 		Repo:    gurl.Path,
 		AllRefs: make(Refs),
 	}
-}
+}*/

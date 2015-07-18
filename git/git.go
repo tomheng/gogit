@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"net"
 	"net/url"
-	"strings"
 )
 
 //git clone on addr
@@ -14,35 +13,6 @@ func Clone(addr, repoPath string) {
 		panic(err)
 	}
 	_ := conn*/
-}
-
-//git-ls-remote - List references in a remote repository
-func LsRemote(addr string) {
-	gitUrl := NewGitURL(addr)
-	conn, err := NewGitConn(gitUrl.Host, gitUrl.Port)
-	if err != nil {
-		panic(err)
-	}
-	cmd := gitUrl.GetCmd("upload-pack")
-	_, err = conn.WritePktLine(cmd)
-	if err != nil {
-		//fmt.Printf("panic here:", err)
-		panic(err)
-	}
-	conn.WritePktLine(nil)
-	pktLines, err := conn.ReadPktLine()
-	if err != nil {
-		panic(err)
-	}
-	//fmt.Printf("return lines:%d", len(pktLines))
-	for i, line := range pktLines {
-		//first line with Capabilities
-		if i == 0 {
-			index := strings.Index(line, "\000")
-			line = line[:index]
-		}
-		fmt.Println(line)
-	}
 }
 
 type GitURL struct {

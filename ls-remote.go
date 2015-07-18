@@ -1,6 +1,10 @@
 package main
 
-import "github.com/tomheng/gogit/git"
+import (
+	"fmt"
+
+	"github.com/tomheng/gogit/git"
+)
 
 func newLsRemoteCmd() *Command {
 	return &Command{
@@ -11,6 +15,12 @@ func newLsRemoteCmd() *Command {
 
 func runLsRemote(cmd *Command, args []string) {
 	for _, url := range args {
-		git.LsRemote(url)
+		refs, _, err := git.RefDiscover(url)
+		if err != nil {
+			panic(err)
+		}
+		for name, object := range refs {
+			fmt.Println(object.Id, "\t", name)
+		}
 	}
 }
