@@ -19,8 +19,8 @@ func runLsRemote(cmd *Command, args []string) {
 		if err != nil {
 			panic(err)
 		}
-		for name, object := range refs {
-			fmt.Println(object.Id, "\t", name)
+		for name, ref := range refs {
+			fmt.Println(ref.Id, "\t", name)
 		}
 	}
 }
