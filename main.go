@@ -12,7 +12,7 @@ import (
 type Command struct {
 	// Run runs the command.
 	// The args are the arguments after the command name.
-	Run func(cmd *Command, args []string)
+	Run func(cmd *Command, args []string) error
 
 	// UsageLine is the one-line usage message.
 	// The first word in the line is taken to be the command name.
@@ -57,6 +57,7 @@ func (c *Command) Runnable() bool {
 func main() {
 	var commands = []*Command{
 		newLsRemoteCmd(),
+		newCloneCmd(),
 	}
 	flag.Parse()
 	args := flag.Args()
@@ -69,15 +70,11 @@ func main() {
 				cmd.Flag.Parse(args[1:])
 				args = cmd.Flag.Args()
 			}
-			cmd.Run(cmd, args)
+			err := cmd.Run(cmd, args)
+			if err != nil {
+				panic(err)
+			}
 			break
 		}
 	}
-	//url := "git://127.0.0.1/flybird"
-	/*remote := git.NewRemote(url)
-	remote.LsRemote()*/
-	//remote.Clone()
-	//git.Clone("git://127.0.0.1/flybird", "")
-	//git.LsRemote("git://127.0.0.1/flybird")
-	//git.LsRemote(url)
 }
