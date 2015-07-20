@@ -25,11 +25,14 @@ func runClone(cmd *Command, args []string) (err error) {
 		return
 	}
 	defer repo.Distruct()
-	repoFile, err := os.Create("/tmp/abcd")
+	//E.g. in native git this is something like .git/objects/pack/tmp_pack_6bo2La
+	tmpPackFilePath := ".git/objects/pack/tmp_pack_incoming"
+	repoFile, err := os.Create(tmpPackFilePath)
 	if err != nil {
 		return
 	}
 	defer repoFile.Close()
+	fmt.Printf("Cloning into '%s'...\n", repo.GetName())
 	err = repo.FetchPack(func(dataType byte, data []byte) {
 		/*
 			1 the remainder of the packet line is a chunk of the pack file - this is the payload channel
@@ -45,8 +48,7 @@ func runClone(cmd *Command, args []string) (err error) {
 			}
 		case git.PROGRESS_FRAME:
 			progress := string(data)
-			fmt.Printf("%c[2K\r", 27)
-			fmt.Println(progress)
+			fmt.Print("\r", "remote: "+progress)
 		case '3': //had convert to error value in receiveWithSideband
 		}
 	})

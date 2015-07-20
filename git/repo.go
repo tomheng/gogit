@@ -2,6 +2,7 @@ package git
 
 import (
 	"fmt"
+	"path"
 	"strings"
 )
 
@@ -26,6 +27,11 @@ func NewRepo(addr string) (repo *Repo, err error) {
 //distruct repo
 func (repo *Repo) Distruct() {
 	repo.conn.Close()
+}
+
+func (repo *Repo) GetName() string {
+	_, repoName := path.Split(repo.url.RepoPath)
+	return repoName
 }
 
 //https://www.kernel.org/pub/software/scm/git/docs/v1.7.0.5/technical/pack-protocol.txt
@@ -83,7 +89,7 @@ func (repo *Repo) FetchPack(sideBandHandle func(dataType byte, data []byte)) (er
 		case strings.HasPrefix(name, "refs/heads/"):
 			want_ids = append(want_ids, ref.Id)
 		default:
-			fmt.Println(name, " skiped")
+			//fmt.Println(name, " skiped")
 		}
 		//fmt.Println(ref.Id, "\t", name)
 	}
