@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"log"
 	"os"
 	"strings"
 )
@@ -72,7 +73,7 @@ func main() {
 			}
 			err := cmd.Run(cmd, args)
 			if err != nil {
-				panic(err)
+				log.Fatalln(err)
 			}
 			break
 		}

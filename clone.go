@@ -2,16 +2,22 @@ package main
 
 import (
 	"errors"
+	"flag"
 	"fmt"
 	"os"
+	"path"
 
 	"github.com/tomheng/gogit/git"
+	"github.com/tomheng/gogit/internal/file"
 )
+
+var cloneFlag = flag.NewFlagSet("clone", flag.ExitOnError)
 
 func newCloneCmd() *Command {
 	return &Command{
 		Run:       runClone,
 		UsageLine: "clone specific git repo",
+		Flag:      *cloneFlag,
 	}
 }
 
@@ -25,14 +31,23 @@ func runClone(cmd *Command, args []string) (err error) {
 		return
 	}
 	defer repo.Distruct()
+	dir := repo.GetName()
+	if len(args) > 1 {
+		dir = args[1]
+	}
+	if file.IsExist(dir) {
+		return errors.New("fatal: destination path '" + dir + "' already exists and is not an empty directory.")
+	}
+	file.MakeDir(dir)
+	//Todo:may be we should Chdir
 	//E.g. in native git this is something like .git/objects/pack/tmp_pack_6bo2La
-	tmpPackFilePath := ".git/objects/pack/tmp_pack_incoming"
-	repoFile, err := os.Create(tmpPackFilePath)
+	tmpPackFilePath := path.Join(dir, ".git/objects/pack/tmp_pack_incoming")
+	repoFile, err := file.OpenFile(tmpPackFilePath, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0)
 	if err != nil {
 		return
 	}
 	defer repoFile.Close()
-	fmt.Printf("Cloning into '%s'...\n", repo.GetName())
+	fmt.Printf("Cloning into '%s'...\n", dir)
 	err = repo.FetchPack(func(dataType byte, data []byte) {
 		/*
 			1 the remainder of the packet line is a chunk of the pack file - this is the payload channel
