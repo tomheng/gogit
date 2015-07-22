@@ -8,3 +8,5 @@ gogit is a go git in golang from bottom-up. It is just a golang programing ***ex
 * [git clone in haskell from the bottom up](http://stefan.saasen.me/articles/git-clone-in-haskell-from-the-bottom-up)
 * [git source code](https://github.com/git/git)
 * [File System Support for Delta Compression](http://mail.xmailserver.net/xdfs.pdf)
+* [gigot](https://github.com/remyoudompheng/gigot)
+* [Gitgo](https://github.com/ChimeraCoder/gitgo/)
