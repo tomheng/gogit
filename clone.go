@@ -4,6 +4,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"io"
 	"os"
 	"path"
 
@@ -46,7 +47,10 @@ func runClone(cmd *Command, args []string) (err error) {
 	if err != nil {
 		return
 	}
-	defer repoFile.Close()
+	defer func() {
+		repoFile.Close()
+		//os.Remove(tmpPackFilePath)
+	}()
 	fmt.Printf("Cloning into '%s'...\n", dir)
 	err = repo.FetchPack(func(dataType byte, data []byte) {
 		/*
@@ -67,6 +71,23 @@ func runClone(cmd *Command, args []string) (err error) {
 		case '3': //had convert to error value in receiveWithSideband
 		}
 	})
+	if err != nil {
+		return
+	}
+	err = repoFile.Sync()
+	if err != nil {
+		return
+	}
+	fi, err := repoFile.Stat()
+	if err != nil {
+		return
+	}
+	fmt.Println("fileSize:", fi.Size())
+	packReader, err := git.NewPackReader(io.NewSectionReader(repoFile, 0, fi.Size()))
+	if err != nil {
+		return
+	}
+	err = packReader.ParseObjectEntry()
 	if err != nil {
 		return
 	}
