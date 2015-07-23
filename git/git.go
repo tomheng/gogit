@@ -1,7 +1,6 @@
 package git
 
 import (
-	"errors"
 	"io"
 	"net"
 	"net/url"
@@ -43,26 +42,32 @@ func getSupportCapabilities() []string {
 
 //parse variable-length integers
 func ParseVarLen(r io.Reader) (len int64, err error) {
+	b, err := ReadOneByte(r)
+	if err != nil {
+		return
+	}
+	var shift uint = 7
+	len |= int64(b) & '\x7f'
+	for IsMsbSet(b) {
+		b, err = ReadOneByte(r)
+		if err != nil {
+			return
+		}
+		len |= (int64(b) & '\x7f') << shift
+		shift += 7
+	}
+	return
+}
+
+//read only one byte from the Reader
+func ReadOneByte(r io.Reader) (b byte, err error) {
 	buf := make([]byte, 1)
 	n, err := r.Read(buf)
 	if err != nil {
 		return
 	}
-	if n < 1 {
-		return 0, errors.New("less than 1 byte")
-	}
-	var shift uint = 7
-	len |= int64(buf[0]) & '\x7f'
-	for IsMsbSet(buf[0]) {
-		n, err = r.Read(buf)
-		if err != nil {
-			return
-		}
-		if n < 1 {
-			break
-		}
-		len |= (int64(buf[0]) & '\x7f') << shift
-		shift += 7
+	if n == 1 {
+		b = buf[0]
 	}
 	return
 }

@@ -96,28 +96,20 @@ func (pack *PackReader) ParseObjects() {
      compressed delta data
 */
 func (pack *PackReader) ParseObjectEntry() (err error) {
-	buf := make([]byte, 1)
-	n, err := pack.reader.Read(buf)
+	b, err := ReadOneByte(pack.reader)
 	if err != nil {
-		return err
+		return
 	}
-	if n < 1 {
-		return errors.New("less than 1 byte")
-	}
-	b := uint64(buf[0])
-	objType := int(buf[0] & '\x70' >> 4)
+	objType := int(b & '\x70' >> 4)
 	var objLen uint64 = 0 //unsupport big than uinit64
-	objLen |= b & '\x1f'
+	objLen |= uint64(b) & '\x1f'
 	var shift uint = 4
-	for IsMsbSet(buf[0]) {
-		_, err = pack.reader.Read(buf)
+	for IsMsbSet(b) {
+		b, err = ReadOneByte(pack.reader)
 		if err != nil {
-			return err
+			return
 		}
-		if n < 1 {
-			break
-		}
-		objLen |= (uint64(buf[0]) & '\x7f') << shift
+		objLen |= (uint64(b) & '\x7f') << shift
 		shift += 7
 	}
 	switch objType {
