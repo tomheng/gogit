@@ -13,7 +13,7 @@ import (
 
 const (
 	PACK_SIGNATURE = "PACK"
-	OBJ_COMMIT     = iota
+	OBJ_COMMIT     = iota //start 1.
 	OBJ_TREE
 	OBJ_BLOB
 	OBJ_TAG
@@ -109,7 +109,6 @@ func (pack *PackReader) ParseObjectEntry() (err error) {
 	var objLen uint64 = 0 //unsupport big than uinit64
 	objLen |= b & '\x1f'
 	var shift uint = 4
-	fmt.Printf("fb:%b\n", buf[0])
 	for IsMsbSet(buf[0]) {
 		_, err = pack.reader.Read(buf)
 		if err != nil {
@@ -137,9 +136,8 @@ func (pack *PackReader) ParseObjectEntry() (err error) {
 	if err != nil {
 		return
 	}
-	nn, err := io.Copy(&out, zr)
-	fmt.Println("expectedLen:", objLen, ",readLne:", nn)
-	fmt.Println(string(out.Bytes()))
+	_, err = io.Copy(&out, zr)
+	//fmt.Println(string(out.Bytes()))
 	zr.Close()
 	return
 }

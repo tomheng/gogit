@@ -1,6 +1,8 @@
 package git
 
 import (
+	"errors"
+	"io"
 	"net"
 	"net/url"
 )
@@ -37,4 +39,30 @@ func getSupportCapabilities() []string {
 		"ofs-delta",
 		"agent=git/1.8.2",
 	}
+}
+
+//parse variable-length integers
+func ParseVarLen(r io.Reader) (len int64, err error) {
+	buf := make([]byte, 1)
+	n, err := r.Read(buf)
+	if err != nil {
+		return
+	}
+	if n < 1 {
+		return 0, errors.New("less than 1 byte")
+	}
+	var shift uint = 7
+	len |= int64(buf[0]) & '\x7f'
+	for IsMsbSet(buf[0]) {
+		n, err = r.Read(buf)
+		if err != nil {
+			return
+		}
+		if n < 1 {
+			break
+		}
+		len |= (int64(buf[0]) & '\x7f') << shift
+		shift += 7
+	}
+	return
 }
