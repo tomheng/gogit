@@ -2,27 +2,42 @@ package delta
 
 import (
 	"bytes"
+	"fmt"
+	"io"
+	"io/ioutil"
+	"os"
 	"testing"
 )
 
 func TestPatch(t *testing.T) {
-	/*basef, err := os.Open("testdata/base.delta")
+	basef, err := os.Open("testdata/base.txt")
 	if err != nil {
 		t.Error(err)
 	}
-	/*targetf, err := os.Open("testdata/target.delta")
-	if err != nil {
-		t.Error(err)
-	}*/
-	/*deltaf, err := os.Open("testdata/delta.delta")
+	bfi, err := basef.Stat()
 	if err != nil {
 		t.Error(err)
 	}
-	w, err := Patch(io.NewSectionReader(basef), io.NewSectionReader(deltaf))
-	_ = w
+	targetf, err := os.Open("testdata/target.txt")
 	if err != nil {
-		t.Fatal(err)
-	}*/
+		t.Error(err)
+	}
+	deltaf, err := os.Open("testdata/delta.txt")
+	if err != nil {
+		t.Error(err)
+	}
+	buf := bytes.NewBuffer(make([]byte, 0))
+	err = Patch(*io.NewSectionReader(basef, 0, bfi.Size()), deltaf, buf)
+	if err != nil {
+		t.Error(err)
+	}
+	rbs, err := ioutil.ReadAll(targetf)
+	if err != nil {
+		t.Error(err)
+	}
+	if string(rbs) != string(buf.Bytes()) {
+		t.Error("diff to target file")
+	}
 }
 
 func TestParseCopyOrInsert(t *testing.T) {

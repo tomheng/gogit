@@ -45,7 +45,7 @@ func ParseCopyOrInsert(r io.Reader) (stype int, offset, length int64, err error)
 	return
 }
 
-func Patch(base io.SectionReader, delta io.Reader) (target io.ReadWriter, err error) {
+func Patch(base io.SectionReader, delta io.Reader, target io.ReadWriter) (err error) {
 	baseLen, err := git.ParseVarLen(delta)
 	if err != nil {
 		return
@@ -58,18 +58,21 @@ func Patch(base io.SectionReader, delta io.Reader) (target io.ReadWriter, err er
 	}
 	for {
 		st, offset, length, err := ParseCopyOrInsert(delta)
+		if length < 1 {
+			break
+		}
 		if err != nil {
 			break
 		}
 		bs := make([]byte, length)
 		switch st {
 		case CopySection:
-			_, err := base.ReadAt(bs, offset)
+			_, err = base.ReadAt(bs, offset)
 			if err != nil {
 				break
 			}
 		case InsertSection:
-			_, err := delta.Read(bs)
+			_, err = delta.Read(bs)
 			if err != nil {
 				break
 			}
@@ -78,10 +81,6 @@ func Patch(base io.SectionReader, delta io.Reader) (target io.ReadWriter, err er
 		if err != nil {
 			break
 		}
-		/*if n1 != n2 {
-			err = errors.New("read not equal to write")
-			break;
-		}*/
 	}
 	//fmt.Printf("bl:%d,tl:%d", baseLen, targetLen)
 	return
