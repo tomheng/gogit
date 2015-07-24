@@ -28,8 +28,9 @@ type Ref struct {
 }
 
 type Object struct {
-	Id       string //SHA-1 40 char
-	SelfType string //commit, blob, tree
+	Id      string //SHA-1 40 char
+	Type    int    //commit, blob, tree
+	Content []byte //content
 }
 
 func (ref *Ref) IsPeeled() bool {
