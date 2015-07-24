@@ -134,7 +134,6 @@ func (repo *Repo) SendWantList(ids ...string) (err error) {
 		}
 		msg += PKT_LR
 		lines = append(lines, []byte(msg))
-		//fmt.Println("========:", string(msg))
 	}
 	lines = append(lines, nil, []byte("done\000")) //flush pktline
 	err = repo.conn.WriteMultiPktLine(lines)       //flush pktline
