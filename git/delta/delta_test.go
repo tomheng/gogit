@@ -2,7 +2,6 @@ package delta
 
 import (
 	"bytes"
-	"fmt"
 	"io"
 	"io/ioutil"
 	"os"

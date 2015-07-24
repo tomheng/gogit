@@ -1,6 +1,9 @@
 package git
 
 import (
+	"bufio"
+	"bytes"
+	"compress/zlib"
 	"io"
 	"net"
 	"net/url"
@@ -68,6 +71,26 @@ func ReadOneByte(r io.Reader) (b byte, err error) {
 	}
 	if n == 1 {
 		b = buf[0]
+	}
+	return
+}
+
+func InflateZlib(r *io.SectionReader) (bs []byte, err error) {
+	var out bytes.Buffer
+	br := bufio.NewReader(r)
+	zr, err := zlib.NewReader(br)
+	if err != nil {
+		return
+	}
+	defer zr.Close()
+	_, err = io.Copy(&out, zr)
+	if err != nil {
+		return
+	}
+	bs = out.Bytes()
+	_, err = r.Seek(0-int64(br.Buffered()), 1)
+	if err != nil {
+		return
 	}
 	return
 }

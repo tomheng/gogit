@@ -1,9 +1,6 @@
 package git
 
 import (
-	"bufio"
-	"bytes"
-	"compress/zlib"
 	"encoding/binary"
 	"errors"
 	"fmt"
@@ -137,19 +134,13 @@ func (pack *PackReader) ParseObjectEntry() (object *Object, err error) {
 		err = errors.New("unkown object type")
 		return
 	}
-	var out bytes.Buffer
-	bfr := bufio.NewReader(pack.reader)
-	zr, err := zlib.NewReader(bfr)
+	oc, err := InflateZlib(pack.reader)
 	if err != nil {
 		return
 	}
-	_, err = io.Copy(&out, zr)
-	pack.reader.Seek(int64(0-bfr.Buffered()), 1)
 	object = &Object{
 		Type:    objType,
-		Content: out.Bytes(),
+		Content: oc,
 	}
-	//fmt.Println(string(out.Bytes()))
-	zr.Close()
 	return
 }
