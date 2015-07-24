@@ -1,6 +1,7 @@
 package git
 
 import (
+	"bufio"
 	"bytes"
 	"compress/zlib"
 	"encoding/binary"
@@ -79,8 +80,16 @@ func ParsePackHeader(pack *io.SectionReader) (version, objectCount uint32, err e
 	return
 }
 
-func (pack *PackReader) ParseObjects() {
-
+func (pack *PackReader) SaveLooseObjects() error {
+	for {
+		object, err := pack.ParseObjectEntry()
+		if err != nil {
+			return err
+		}
+		_ = object
+		//fmt.Println("type:", object.Type, "content:", string(object.Content))
+	}
+	return nil
 }
 
 /*
@@ -95,17 +104,21 @@ func (pack *PackReader) ParseObjects() {
 	 is an OBJ_OFS_DELTA object
      compressed delta data
 */
-func (pack *PackReader) ParseObjectEntry() (err error) {
-	b, err := ReadOneByte(pack.reader)
+func (pack *PackReader) ParseObjectEntry() (object *Object, err error) {
+	b, err := ReadOneByte(pack)
 	if err != nil {
 		return
+	}
+	//end
+	if b == 0 {
+		return nil, io.EOF
 	}
 	objType := int(b & '\x70' >> 4)
 	var objLen uint64 = 0 //unsupport big than uinit64
 	objLen |= uint64(b) & '\x1f'
 	var shift uint = 4
 	for IsMsbSet(b) {
-		b, err = ReadOneByte(pack.reader)
+		b, err = ReadOneByte(pack)
 		if err != nil {
 			return
 		}
@@ -121,14 +134,21 @@ func (pack *PackReader) ParseObjectEntry() (err error) {
 	case OBJ_OFS_DELTA:
 	case OBJ_REF_DELTA:
 	default:
-		return errors.New("unkown object type")
+		err = errors.New("unkown object type")
+		return
 	}
 	var out bytes.Buffer
-	zr, err := zlib.NewReader(pack.reader)
+	bfr := bufio.NewReader(pack.reader)
+	zr, err := zlib.NewReader(bfr)
 	if err != nil {
 		return
 	}
 	_, err = io.Copy(&out, zr)
+	pack.reader.Seek(int64(0-bfr.Buffered()), 1)
+	object = &Object{
+		Type:    objType,
+		Content: out.Bytes(),
+	}
 	//fmt.Println(string(out.Bytes()))
 	zr.Close()
 	return
