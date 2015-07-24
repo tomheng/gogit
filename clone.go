@@ -68,7 +68,9 @@ func runClone(cmd *Command, args []string) (err error) {
 		case git.PROGRESS_FRAME:
 			progress := string(data)
 			fmt.Print("\r", "remote: "+progress)
-		case '3': //had convert to error value in receiveWithSideband
+		case git.ERROR_FRAME: //had convert to error value in receiveWithSideband
+			fmt.Println(string(data))
+		default:
 		}
 	})
 	if err != nil {
@@ -82,13 +84,12 @@ func runClone(cmd *Command, args []string) (err error) {
 	if err != nil {
 		return
 	}
-	fmt.Println("fileSize:", fi.Size())
 	packReader, err := git.NewPackReader(io.NewSectionReader(repoFile, 0, fi.Size()))
 	if err != nil {
 		return
 	}
-	err = packReader.ParseObjectEntry()
-	if err != nil {
+	err = packReader.SaveLooseObjects()
+	if err != nil && err != io.EOF {
 		return
 	}
 	return
