@@ -34,9 +34,9 @@ func getSupportCapabilities() []string {
 	return []string{
 		"multi_ack_detailed",
 		"side-band-64k",
-		"thin-pack",
-		"ofs-delta",
-		"agent=git/1.8.2",
+		//"thin-pack",
+		//"ofs-delta",
+		"agent=git/2.3.2",
 	}
 }
 
