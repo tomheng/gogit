@@ -105,7 +105,7 @@ func (pack *PackReader) SaveLooseObjects() error {
      compressed delta data
 */
 func (pack *PackReader) ParseObjectEntry() (object *Object, err error) {
-	b, err := ReadOneByte(pack)
+	b, err := ReadOneByte(pack.reader)
 	if err != nil {
 		return
 	}
@@ -118,7 +118,7 @@ func (pack *PackReader) ParseObjectEntry() (object *Object, err error) {
 	objLen |= uint64(b) & '\x1f'
 	var shift uint = 4
 	for IsMsbSet(b) {
-		b, err = ReadOneByte(pack)
+		b, err = ReadOneByte(pack.reader)
 		if err != nil {
 			return
 		}
