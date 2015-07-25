@@ -9,13 +9,14 @@ import (
 	"net/url"
 )
 
+//GitURL wrap url.URL
 type GitURL struct {
 	Host     string
 	Port     string
 	RepoPath string
 }
 
-//covert git url string to a gitURL Stuct
+//NewGitURL covert git url string to a gitURL Stuct
 func NewGitURL(addr string) *GitURL {
 	gurl, err := url.Parse(addr)
 	if err != nil {
@@ -43,26 +44,24 @@ func getSupportCapabilities() []string {
 	}
 }
 
-//parse variable-length integers
+//ParseVarLen parse variable-length integers
 func ParseVarLen(r io.Reader) (len int64, err error) {
-	b, err := ReadOneByte(r)
-	if err != nil {
-		return
-	}
-	var shift uint = 7
-	len |= int64(b) & '\x7f'
-	for IsMsbSet(b) {
-		b, err = ReadOneByte(r)
+	var shift uint //0
+	for {
+		b, err := ReadOneByte(r)
 		if err != nil {
-			return
+			break
 		}
 		len |= (int64(b) & '\x7f') << shift
+		if !IsMsbSet(b) {
+			break
+		}
 		shift += 7
 	}
 	return
 }
 
-//read only one byte from the Reader
+//ReadOneByte read only one byte from the Reader
 func ReadOneByte(r io.Reader) (b byte, err error) {
 	buf := make([]byte, 1)
 	n, err := r.Read(buf)
@@ -75,6 +74,7 @@ func ReadOneByte(r io.Reader) (b byte, err error) {
 	return
 }
 
+//InflateZlib unbuffered io
 func InflateZlib(r *io.SectionReader) (bs []byte, err error) {
 	var out bytes.Buffer
 	br := bufio.NewReader(r)
