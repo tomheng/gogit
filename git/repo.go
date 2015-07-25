@@ -102,7 +102,7 @@ func (repo *Repo) FetchPack(sideBandHandle func(dataType byte, data []byte)) (er
 		if err != nil {
 			return err
 		}
-		go sideBandHandle(dataType, data)
+		sideBandHandle(dataType, data)
 	}
 	//wait all return
 	return
