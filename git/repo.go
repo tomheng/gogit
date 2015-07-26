@@ -95,9 +95,14 @@ func (repo *Repo) CreateLocalRefs(name string, ref Ref) (err error) {
 		refPath = repo.GetRepoFilePath("refs/remotes/origin", strings.TrimLeft(name, "refs/heads/"))
 	case name == "HEAD":
 		refPath = repo.GetRepoFilePath("refs/remotes/origin", "HEAD")
+		//update local HEAD
+		err = file.WriteFile(refPath, []byte("ref: refs/remotes/origin\n"), 0644)
+		if err != nil {
+			return
+		}
 	}
 	if len(refPath) > 0 {
-		err = file.WriteFile(refPath, []byte(ref.Id+"\n"), 0644)
+		err = file.WriteFile(repo.GetRepoFilePath("", "HEAD"), []byte(ref.Id+"\n"), 0644)
 	}
 	return
 }
