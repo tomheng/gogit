@@ -26,7 +26,7 @@ func TestPatch(t *testing.T) {
 		t.Error(err)
 	}
 	buf := bytes.NewBuffer(make([]byte, 0))
-	err = Patch(*io.NewSectionReader(basef, 0, bfi.Size()), deltaf, buf)
+	err = PatchDelta(io.NewSectionReader(basef, 0, bfi.Size()), deltaf, buf)
 	if err != nil {
 		t.Error(err)
 	}

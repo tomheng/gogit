@@ -57,7 +57,7 @@ func TestParseObjectEntry(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	err = packReader.ParseObjectEntry()
+	_, err = packReader.ParseObjectEntry()
 	if err != nil {
 		t.Error(err)
 	}
