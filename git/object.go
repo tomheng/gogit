@@ -64,9 +64,10 @@ type Object struct {
 //if it is a delta object, we will delating it to real content
 func NewObject(objType ObjType, content, base []byte) *Object {
 	if objType == OBJ_OFS_DELTA || objType == OBJ_REF_DELTA {
-		brw := bytes.NewBuffer(make([]byte, 1024))
+		//brw := bytes.NewBuffer(make([]byte, 1024))
+		var brw bytes.Buffer
 		base := bytes.NewReader(base)
-		PatchDelta(io.NewSectionReader(base, 0, int64(base.Len())), bytes.NewReader(content), brw)
+		PatchDelta(io.NewSectionReader(base, 0, int64(base.Len())), bytes.NewReader(content), &brw)
 		objType = OBJ_BLOB
 		content = brw.Bytes()
 	}
