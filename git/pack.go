@@ -83,6 +83,9 @@ func (pack *PackReader) ParseObjects(f func(object *Object) error) (err error) {
 		if object == nil {
 			continue
 		}
+		if f == nil {
+			continue
+		}
 		err = f(object)
 		if err != nil {
 			break

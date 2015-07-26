@@ -82,9 +82,32 @@ func (repo *Repo) RefDiscover() (refs Refs, capabilities []string, err error) {
 	return
 }
 
+func (repo *Repo) GetRepoFilePath(dir, fname string) string {
+	return filepath.Join(repo.ClonePath, ".git", dir, fname)
+}
+
+func (repo *Repo) CreateLocalRefs(name string, ref Ref) (err error) {
+	var refPath string
+	switch {
+	case strings.HasPrefix(name, "refs/tags/"): //tags
+		refPath = repo.GetRepoFilePath("refs/tags", strings.TrimLeft(name, "refs/tags/"))
+	case strings.HasPrefix(name, "refs/heads/"): //origin
+		refPath = repo.GetRepoFilePath("refs/remotes/origin", strings.TrimLeft(name, "refs/heads/"))
+	case name == "HEAD":
+		refPath = repo.GetRepoFilePath("refs/remotes/origin", "HEAD")
+	}
+	if len(refPath) > 0 {
+		err = file.WriteFile(refPath, []byte(ref.Id+"\n"), 0644)
+	}
+	return
+}
+
 //fetch pack
 //sideBandHandle func(dataType byte, data []byte)
-func (repo *Repo) FetchPack(sideBandHandle func(dataType byte, data []byte)) (err error) {
+func (repo *Repo) FetchPack(
+	sideBandHandle func(dataType byte, data []byte),
+	refHandle func(name string, ref Ref) (err error),
+) (err error) {
 	refs, _, err := repo.RefDiscover()
 	if err != nil {
 		return
@@ -107,7 +130,16 @@ func (repo *Repo) FetchPack(sideBandHandle func(dataType byte, data []byte)) (er
 		default:
 			//fmt.Println(name, " skiped")
 		}
+		if refHandle != nil {
+			err = refHandle(name, ref)
+			if err != nil {
+				return err
+			}
+		}
 		//fmt.Println(ref.Id, "\t", name)
+	}
+	if sideBandHandle == nil {
+		return
 	}
 	err = repo.SendWantList(want_ids...)
 	for {
@@ -116,7 +148,7 @@ func (repo *Repo) FetchPack(sideBandHandle func(dataType byte, data []byte)) (er
 			break
 		}
 		if err != nil {
-			return err
+			break
 		}
 		sideBandHandle(dataType, data)
 	}

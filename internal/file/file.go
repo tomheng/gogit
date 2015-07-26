@@ -1,6 +1,7 @@
 package file
 
 import (
+	"io/ioutil"
 	"os"
 	"path"
 )
@@ -21,6 +22,15 @@ func MakeDir(dir string) (err error) {
 		return
 	}
 	return
+}
+
+func WriteFile(filename string, data []byte, perm os.FileMode) (err error) {
+	dir := path.Dir(filename)
+	err = MakeDir(dir)
+	if err != nil {
+		return
+	}
+	return ioutil.WriteFile(filename, data, perm)
 }
 
 func Create(name string) (file *os.File, err error) {

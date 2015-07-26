@@ -68,7 +68,10 @@ func runClone(cmd *Command, args []string) (err error) {
 			fmt.Println(string(data))
 		default:
 		}
-	})
+	}, (*repo).CreateLocalRefs)
+	if err != nil {
+		return
+	}
 	if err != nil {
 		return
 	}

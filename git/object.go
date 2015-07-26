@@ -54,15 +54,22 @@ type Object struct {
 	Id      string  //SHA-1 40 char
 	Type    ObjType //commit, blob, tree, tag
 	Content []byte  //content
-	Base    []byte  //delta oject based object
+	//Base    []byte  //delta oject based object
 }
 
-func NewObject(ty ObjType, c, b []byte) *Object {
+func NewObject(objType ObjType, content, base []byte) *Object {
+	if objType == OBJ_OFS_DELTA || objType == OBJ_REF_DELTA {
+		brw := bytes.NewBuffer(make([]byte, 1024))
+		base := bytes.NewReader(base)
+		PatchDelta(io.NewSectionReader(base, 0, int64(base.Len())), bytes.NewReader(content), brw)
+		objType = OBJ_BLOB
+		content = brw.Bytes()
+	}
 	return &Object{
 		//Reader: bytes.NewReader(c),
-		Type:    ty,
-		Base:    b,
-		Content: c,
+		Type: objType,
+		//Base:    b,
+		Content: content,
 	}
 }
 
@@ -87,16 +94,6 @@ func (obj *Object) GetStoreHeader() []byte {
 func (obj *Object) GetId() (ids string) {
 	if len(obj.Id) > 0 {
 		return obj.Id
-	}
-	if obj.Base != nil {
-		brw := bytes.NewBuffer(make([]byte, 1024))
-		base := bytes.NewReader(obj.Base)
-		err := PatchDelta(io.NewSectionReader(base, 0, int64(base.Len())), bytes.NewReader(obj.Content), brw)
-		if err != nil {
-			return
-		}
-		obj.Type = OBJ_BLOB
-		obj.Content = brw.Bytes()
 	}
 	sw := sha1.New()
 	sw.Write(obj.GetStoreHeader())
