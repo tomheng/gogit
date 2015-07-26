@@ -72,9 +72,6 @@ func runClone(cmd *Command, args []string) (err error) {
 	if err != nil {
 		return
 	}
-	if err != nil {
-		return
-	}
 	err = repo.SaveLooseObjects(repoFile)
 	if err != nil {
 		return
