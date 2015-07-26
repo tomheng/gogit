@@ -1,5 +1,7 @@
 package git
 
+//https://www.kernel.org/pub/software/scm/git/docs/v1.7.0.5/technical/pack-protocol.txt
+
 import (
 	"errors"
 	"fmt"
@@ -12,26 +14,28 @@ import (
 	"github.com/tomheng/gogit/internal/file"
 )
 
+//Repo git repo instance
 type Repo struct {
-	conn      *GitConn
-	url       *GitURL
+	conn      *Conn
+	url       *URL
 	ClonePath string
 	Name      string
 }
 
+//NewRepo create new Repo struct
 func NewRepo(addr, dir string) (repo *Repo, err error) {
-	gitUrl := NewGitURL(addr)
-	_, repoName := path.Split(gitUrl.RepoPath)
+	gitURL := NewURL(addr)
+	_, repoName := path.Split(gitURL.RepoPath)
 	if len(dir) < 1 {
 		dir = repoName
 	}
-	conn, err := NewGitConn(gitUrl.Host, gitUrl.Port)
+	conn, err := NewConn(gitURL.Host, gitURL.Port)
 	if err != nil {
 		return
 	}
 	repo = &Repo{
 		conn,
-		gitUrl,
+		gitURL,
 		dir,
 		repoName,
 	}
@@ -45,12 +49,12 @@ func (repo *Repo) GetTmpPackFile() (*os.File, error) {
 	return file.OpenFile(filePath, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0)
 }
 
-//distruct repo
+//Distruct distruct repo
 func (repo *Repo) Distruct() {
 	repo.conn.Close()
 }
 
-//https://www.kernel.org/pub/software/scm/git/docs/v1.7.0.5/technical/pack-protocol.txt
+//RefDiscover just get refs from server
 func (repo *Repo) RefDiscover() (refs Refs, capabilities []string, err error) {
 	err = repo.SendCmd("upload-pack")
 	if err != nil {
@@ -82,10 +86,12 @@ func (repo *Repo) RefDiscover() (refs Refs, capabilities []string, err error) {
 	return
 }
 
+//GetRepoFilePath get repo file path with current repo path
 func (repo *Repo) GetRepoFilePath(dir, fname string) string {
 	return filepath.Join(repo.ClonePath, ".git", dir, fname)
 }
 
+//CreateLocalRefs save ref to local disk
 func (repo *Repo) CreateLocalRefs(name string, ref Ref) (err error) {
 	var refPath string
 	switch {
@@ -102,12 +108,13 @@ func (repo *Repo) CreateLocalRefs(name string, ref Ref) (err error) {
 		}
 	}
 	if len(refPath) > 0 {
-		err = file.WriteFile(refPath, []byte(ref.Id+"\n"), 0644)
+		err = file.WriteFile(refPath, []byte(ref.ID+"\n"), 0644)
 	}
 	return
 }
 
-//fetch pack
+//FetchPack negotionate with remote server
+//send want list and parse pack file to objects
 //sideBandHandle func(dataType byte, data []byte)
 func (repo *Repo) FetchPack(
 	sideBandHandle func(dataType byte, data []byte),
@@ -117,7 +124,7 @@ func (repo *Repo) FetchPack(
 	if err != nil {
 		return
 	}
-	want_ids := make([]string, 0)
+	var wantIDs []string //wantIDs := make([]string, 0)
 	//Todo:compare local commit and remote commit
 	//create want list and have list
 	for name, ref := range refs {
@@ -131,7 +138,7 @@ func (repo *Repo) FetchPack(
 		case strings.HasPrefix(name, "refs/tags/"):
 			fallthrough
 		case strings.HasPrefix(name, "refs/heads/"):
-			want_ids = append(want_ids, ref.Id)
+			wantIDs = append(wantIDs, ref.ID)
 		default:
 			//fmt.Println(name, " skiped")
 		}
@@ -141,12 +148,12 @@ func (repo *Repo) FetchPack(
 				return err
 			}
 		}
-		//fmt.Println(ref.Id, "\t", name)
+		//fmt.Println(ref.ID, "\t", name)
 	}
 	if sideBandHandle == nil {
 		return
 	}
-	err = repo.SendWantList(want_ids...)
+	err = repo.SendWantList(wantIDs...)
 	for {
 		dataType, data, done, err := repo.conn.receiveWithSideband()
 		if done {
@@ -161,8 +168,9 @@ func (repo *Repo) FetchPack(
 	return
 }
 
+//SaveObject save object on disk
 func (repo *Repo) SaveObject(obj *Object) (err error) {
-	id := obj.GetId()
+	id := obj.GetID()
 	if len(id) < 40 {
 		return errors.New("wrong object id")
 	}
@@ -183,6 +191,7 @@ func (repo *Repo) SaveObject(obj *Object) (err error) {
 	return
 }
 
+//SaveLooseObjects directly use pack file to recover objects
 func (repo *Repo) SaveLooseObjects(f *os.File) (err error) {
 	fi, err := f.Stat()
 	if err != nil {
@@ -196,7 +205,7 @@ func (repo *Repo) SaveLooseObjects(f *os.File) (err error) {
 	return packReader.ParseObjects((*repo).SaveObject)
 }
 
-//send cmd to server
+//SendCmd send cmd to server
 func (repo *Repo) SendCmd(cmds ...string) (err error) {
 	for _, cmd := range cmds {
 		switch cmd {
@@ -212,6 +221,28 @@ func (repo *Repo) SendCmd(cmds ...string) (err error) {
 	return
 }
 
+/*SendWantList telling the
+server what objects it wants and what objects it has, so the server
+can make a packfile that only contains the objects that the client needs.
+The client will also send a list of the capabilities it wants to be in
+effect, out of what the server said it could do with the first 'want' line.
+----
+  upload-request    =  want-list
+		       have-list
+		       compute-end
+
+  want-list         =  first-want
+		       *additional-want
+		       flush-pkt
+
+  first-want        =  PKT-LINE("want" SP obj-id SP capability-list LF)
+  additional-want   =  PKT-LINE("want" SP obj-id LF)
+
+  have-list         =  *have-line
+  have-line         =  PKT-LINE("have" SP obj-id LF)
+  compute-end       =  flush-pkt / PKT-LINE("done")
+----
+*/
 func (repo *Repo) SendWantList(ids ...string) (err error) {
 	var lines [][]byte
 	for i, id := range ids {

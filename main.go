@@ -43,6 +43,7 @@ func (c *Command) Name() string {
 	return name
 }
 
+//Usage print help msg
 func (c *Command) Usage() {
 	fmt.Fprintf(os.Stderr, "usage: %s\n\n", c.UsageLine)
 	fmt.Fprintf(os.Stderr, "%s\n", strings.TrimSpace(c.Long))

@@ -8,35 +8,33 @@ import (
 	"github.com/bargez/pktline"
 )
 
-type GitConn struct {
+//Conn handle git connection(ssh or git or http)
+type Conn struct {
 	net.Conn
 	//*pktline.Encoder
 	//*pktline.Decoder
 }
 
-//global git conn
-var giConn GitConn
-
-//create git conn
-func NewGitConn(host, port string) (*GitConn, error) {
+//NewConn create git conn
+func NewConn(host, port string) (*Conn, error) {
 	conn, err := net.Dial("tcp", net.JoinHostPort(host, port))
 	if err != nil {
 		return nil, err
 	}
-	return &GitConn{
+	return &Conn{
 		conn,
 	}, err
 }
 
-//wite pktline to conn
-func (gconn *GitConn) WritePktLine(line []byte) (int, error) {
+//WritePktLine wite pktline to conn
+func (gconn *Conn) WritePktLine(line []byte) (int, error) {
 	pktLineEder := pktline.NewEncoderDecoder(gconn)
 	err := pktLineEder.Encode(line)
 	return len(line), err
 }
 
-//write multi pktline co conn
-func (gconn *GitConn) WriteMultiPktLine(lines [][]byte) error {
+//WriteMultiPktLine write multi pktline co conn
+func (gconn *Conn) WriteMultiPktLine(lines [][]byte) error {
 	var data []byte
 	for _, line := range lines {
 		line, err := pktline.Encode(line)
@@ -60,13 +58,14 @@ func (gconn *GitConn) WriteMultiPktLine(lines [][]byte) error {
 	return nil
 }
 
-func (gconn *GitConn) WriteEndPktLine() (int, error) {
+//WriteEndPktLine write end pkt line
+func (gconn *Conn) WriteEndPktLine() (int, error) {
 	return gconn.WritePktLine(nil)
 }
 
-//read pktline from conn
-func (gconn *GitConn) ReadPktLine() ([]string, error) {
-	pktlBytes := make([][]byte, 0)
+//ReadPktLine read pktline from conn
+func (gconn *Conn) ReadPktLine() ([]string, error) {
+	var pktlBytes [][]byte //pktlBytes := make([][]byte, 0)
 	pktLineEder := pktline.NewEncoderDecoder(gconn)
 	err := pktLineEder.DecodeUntilFlush(&pktlBytes)
 	if err != nil {
@@ -79,8 +78,8 @@ func (gconn *GitConn) ReadPktLine() ([]string, error) {
 	return pktLines, err
 }
 
-//read data from conn
-func (gconn *GitConn) receiveWithSideband() (dataType byte, data []byte, done bool, err error) {
+//receiveWithSideband read data from conn
+func (gconn *Conn) receiveWithSideband() (dataType byte, data []byte, done bool, err error) {
 	pktLineEder := pktline.NewEncoderDecoder(gconn)
 	var line []byte
 	err = pktLineEder.Decode(&line)

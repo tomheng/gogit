@@ -3,11 +3,11 @@ package git
 import "io"
 
 const (
-	CopySection = iota
-	InsertSection
+	copySection = iota
+	insertSection
 )
 
-//parse copy or insert section info from delta reader
+//ParseCopyOrInsert parse copy or insert section info from delta reader
 func ParseCopyOrInsert(r io.Reader) (stype int, offset, length int64, err error) {
 	b, err := ReadOneByte(r)
 	if err != nil {
@@ -16,7 +16,7 @@ func ParseCopyOrInsert(r io.Reader) (stype int, offset, length int64, err error)
 	var _b byte
 	switch IsMsbSet(b) {
 	case true: //copy section
-		stype = CopySection
+		stype = copySection
 		//check last 4 byte
 		for i := uint(0); i < 7; i++ {
 			//we should read 1 byte from reader
@@ -35,12 +35,13 @@ func ParseCopyOrInsert(r io.Reader) (stype int, offset, length int64, err error)
 			}
 		}
 	case false: //insert section
-		stype = InsertSection
+		stype = insertSection
 		length = int64(b)
 	}
 	return
 }
 
+//PatchDelta recover real object data
 func PatchDelta(base *io.SectionReader, delta io.Reader, target io.ReadWriter) (err error) {
 	baseLen, err := ParseVarLen(delta)
 	if err != nil {
@@ -62,12 +63,12 @@ func PatchDelta(base *io.SectionReader, delta io.Reader, target io.ReadWriter) (
 		}
 		bs := make([]byte, length)
 		switch st {
-		case CopySection:
+		case copySection:
 			_, err = base.ReadAt(bs, offset)
 			if err != nil {
 				break
 			}
-		case InsertSection:
+		case insertSection:
 			_, err = delta.Read(bs)
 			if err != nil {
 				break

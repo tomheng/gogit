@@ -9,15 +9,15 @@ import (
 	"net/url"
 )
 
-//GitURL wrap url.URL
-type GitURL struct {
+//URL wrap url.URL
+type URL struct {
 	Host     string
 	Port     string
 	RepoPath string
 }
 
-//NewGitURL covert git url string to a gitURL Stuct
-func NewGitURL(addr string) *GitURL {
+//NewURL covert git url string to a gitURL Stuct
+func NewURL(addr string) *URL {
 	gurl, err := url.Parse(addr)
 	if err != nil {
 		panic(err)
@@ -27,7 +27,7 @@ func NewGitURL(addr string) *GitURL {
 		port = "9418"
 		host = gurl.Host
 	}
-	return &GitURL{
+	return &URL{
 		Host:     host,
 		Port:     port,
 		RepoPath: gurl.Path,

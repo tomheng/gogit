@@ -10,20 +10,22 @@ import (
 //https://github.com/git/git/blob/master/Documentation/technical/pack-format.txt
 
 const (
-	PACK_SIGNATURE = "PACK"
+	packSignature = "PACK"
 )
 
-//check whether the most significant bit is set
+//IsMsbSet check whether the most significant bit is set
 func IsMsbSet(b byte) bool {
 	return b>>7 == '\x01'
 }
 
+//PackReader a struct
 type PackReader struct {
 	*io.SectionReader
 	offset               int64
 	Version, ObjectCount uint32
 }
 
+//NewPackReader create a pack reader
 func NewPackReader(pack *io.SectionReader) (*PackReader, error) {
 	version, objectCount, err := ParsePackHeader(pack)
 	if err != nil {
@@ -36,8 +38,7 @@ func NewPackReader(pack *io.SectionReader) (*PackReader, error) {
 	}, nil
 }
 
-/*
-A header appears at the beginning and consists of the following:
+/*ParsePackHeader A header appears at the beginning and consists of the following:
 
      4-byte signature:
          The signature is: {'P', 'A', 'C', 'K'}
@@ -58,19 +59,20 @@ func ParsePackHeader(pack *io.SectionReader) (version, objectCount uint32, err e
 	if err != nil {
 		return
 	}
-	if signature := string(buf[:4]); signature != PACK_SIGNATURE {
+	if signature := string(buf[:4]); signature != packSignature {
 		err = errors.New("pack header has wrong signature: " + signature)
 		return
 	}
 	version = binary.BigEndian.Uint32(buf[4:8])
 	if version != 2 {
-		err = errors.New(fmt.Sprintf("version unsupport: %d ", version))
+		err = fmt.Errorf("version unsupport: %d ", version)
 		return
 	}
 	objectCount = binary.BigEndian.Uint32(buf[8:])
 	return
 }
 
+//ParseObjects translate all object in pack reader
 func (pack *PackReader) ParseObjects(f func(object *Object) error) (err error) {
 	for {
 		object, err := pack.ParseObjectEntry()
@@ -94,17 +96,19 @@ func (pack *PackReader) ParseObjects(f func(object *Object) error) (err error) {
 	return nil
 }
 
+//Read record the offset
 func (pack *PackReader) Read(p []byte) (n int, err error) {
 	n, err = pack.SectionReader.Read(p)
 	pack.offset += int64(n)
 	return
 }
 
+//Tell tell current cursor on reader
 func (pack *PackReader) Tell() int64 {
 	return pack.offset
 }
 
-/*
+/*ParseObjectEntry parse object from pack reader
 	(undeltified representation)
      n-byte type and length (3-bit type, (n-1)*7+4-bit length)
      compressed data
@@ -127,9 +131,9 @@ func (pack *PackReader) ParseObjectEntry() (object *Object, err error) {
 	}
 	objType := ObjType(b & '\x70' >> 4)
 	var (
-		objLen uint64 = 0 //unsupport big than uinit64
-		offset int64  = 0
-		shift  uint   = 4
+		objLen uint64 //unsupport big than uinit64
+		offset int64
+		shift  uint = 4
 		base   []byte
 	)
 	objLen |= uint64(b) & '\x1f'
@@ -158,8 +162,8 @@ func (pack *PackReader) ParseObjectEntry() (object *Object, err error) {
 			break
 		}
 	case OBJ_REF_DELTA: //Todo:maybe we don`t support this
-		tmpId := make([]byte, 20)
-		n, err := pack.Read(tmpId)
+		tmpID := make([]byte, 20)
+		n, err := pack.Read(tmpID)
 		if err != nil {
 			break
 		}
@@ -167,7 +171,7 @@ func (pack *PackReader) ParseObjectEntry() (object *Object, err error) {
 			err = errors.New("read less than 20 bytes")
 			break
 		}
-		base = tmpId
+		base = tmpID
 	default:
 		//err = errors.New(fmt.Sprintf("unkown object type %d", objType))
 		return

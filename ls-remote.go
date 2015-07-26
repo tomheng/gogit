@@ -28,7 +28,7 @@ func runLsRemote(cmd *Command, args []string) error {
 		return err
 	}
 	for name, ref := range refs {
-		fmt.Println(ref.Id, "\t", name)
+		fmt.Println(ref.ID, "\t", name)
 	}
 	return nil
 }
