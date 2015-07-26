@@ -27,12 +27,6 @@ type Ref struct {
 	Child  Object //contain some info for this ref
 }
 
-type Object struct {
-	Id      string //SHA-1 40 char
-	Type    int    //commit, blob, tree
-	Content []byte //content
-}
-
 func (ref *Ref) IsPeeled() bool {
 	return strings.HasSuffix(ref.Name, PEELED_FLAG)
 }

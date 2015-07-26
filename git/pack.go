@@ -11,13 +11,6 @@ import (
 
 const (
 	PACK_SIGNATURE = "PACK"
-	OBJ_COMMIT     = iota //start 1.
-	OBJ_TREE
-	OBJ_BLOB
-	OBJ_TAG
-	_
-	OBJ_OFS_DELTA
-	OBJ_REF_DELTA
 )
 
 //check whether the most significant bit is set
@@ -26,7 +19,8 @@ func IsMsbSet(b byte) bool {
 }
 
 type PackReader struct {
-	reader               *io.SectionReader
+	*io.SectionReader
+	offset               int64
 	Version, ObjectCount uint32
 }
 
@@ -36,9 +30,9 @@ func NewPackReader(pack *io.SectionReader) (*PackReader, error) {
 		return nil, err
 	}
 	return &PackReader{
-		reader:      pack,
-		Version:     version,
-		ObjectCount: objectCount,
+		SectionReader: pack,
+		Version:       version,
+		ObjectCount:   objectCount,
 	}, nil
 }
 
@@ -77,16 +71,34 @@ func ParsePackHeader(pack *io.SectionReader) (version, objectCount uint32, err e
 	return
 }
 
-func (pack *PackReader) SaveLooseObjects() error {
+func (pack *PackReader) ParseObjects(f func(object *Object) error) (err error) {
 	for {
 		object, err := pack.ParseObjectEntry()
+		if err == io.EOF {
+			break
+		}
 		if err != nil {
 			return err
 		}
-		_ = object
-		//fmt.Println("type:", object.Type, "content:", string(object.Content))
+		if object == nil {
+			continue
+		}
+		err = f(object)
+		if err != nil {
+			break
+		}
 	}
 	return nil
+}
+
+func (pack *PackReader) Read(p []byte) (n int, err error) {
+	n, err = pack.SectionReader.Read(p)
+	pack.offset += int64(n)
+	return
+}
+
+func (pack *PackReader) Tell() int64 {
+	return pack.offset
 }
 
 /*
@@ -102,7 +114,7 @@ func (pack *PackReader) SaveLooseObjects() error {
      compressed delta data
 */
 func (pack *PackReader) ParseObjectEntry() (object *Object, err error) {
-	b, err := ReadOneByte(pack.reader)
+	b, err := ReadOneByte(pack)
 	if err != nil {
 		return
 	}
@@ -110,12 +122,16 @@ func (pack *PackReader) ParseObjectEntry() (object *Object, err error) {
 	if b == 0 {
 		return nil, io.EOF
 	}
-	objType := int(b & '\x70' >> 4)
-	var objLen uint64 = 0 //unsupport big than uinit64
+	objType := ObjType(b & '\x70' >> 4)
+	var (
+		objLen uint64 = 0 //unsupport big than uinit64
+		offset int64  = 0
+		shift  uint   = 4
+		base   []byte
+	)
 	objLen |= uint64(b) & '\x1f'
-	var shift uint = 4
 	for IsMsbSet(b) {
-		b, err = ReadOneByte(pack.reader)
+		b, err = ReadOneByte(pack)
 		if err != nil {
 			return
 		}
@@ -129,18 +145,34 @@ func (pack *PackReader) ParseObjectEntry() (object *Object, err error) {
 	case OBJ_TAG:
 
 	case OBJ_OFS_DELTA:
-	case OBJ_REF_DELTA:
+		offset, err = ParseVarLen(pack)
+		if err != nil {
+			break
+		}
+		tmpSectionReader := io.NewSectionReader(pack, pack.Tell()-offset, offset)
+		base, err = InflateZlib(tmpSectionReader)
+		if err != nil {
+			break
+		}
+	case OBJ_REF_DELTA: //Todo:maybe we don`t support this
+		tmpId := make([]byte, 20)
+		n, err := pack.Read(tmpId)
+		if err != nil {
+			break
+		}
+		if n != 20 {
+			err = errors.New("read less than 20 bytes")
+			break
+		}
+		base = tmpId
 	default:
-		err = errors.New("unkown object type")
+		//err = errors.New(fmt.Sprintf("unkown object type %d", objType))
 		return
 	}
-	oc, err := InflateZlib(pack.reader)
+	oc, err := InflateZlib(pack.SectionReader)
 	if err != nil {
 		return
 	}
-	object = &Object{
-		Type:    objType,
-		Content: oc,
-	}
+	object = NewObject(objType, oc, base)
 	return
 }

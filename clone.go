@@ -4,9 +4,6 @@ import (
 	"errors"
 	"flag"
 	"fmt"
-	"io"
-	"os"
-	"path"
 
 	"github.com/tomheng/gogit/git"
 	"github.com/tomheng/gogit/internal/file"
@@ -27,23 +24,22 @@ func runClone(cmd *Command, args []string) (err error) {
 	if len(args) < 1 {
 		return errors.New("args not enogh")
 	}
-	repo, err := git.NewRepo(args[0])
+	dir := ""
+	if len(args) > 1 {
+		dir = args[1]
+	}
+	repo, err := git.NewRepo(args[0], dir)
 	if err != nil {
 		return
 	}
 	defer repo.Distruct()
-	dir := repo.GetName()
-	if len(args) > 1 {
-		dir = args[1]
+	if file.IsExist(repo.ClonePath) {
+		err = errors.New("fatal: destination path '" + repo.ClonePath + "' already exists and is not an empty directory.")
+		return
 	}
-	if file.IsExist(dir) {
-		return errors.New("fatal: destination path '" + dir + "' already exists and is not an empty directory.")
-	}
-	file.MakeDir(dir)
+	file.MakeDir(repo.ClonePath)
 	//Todo:may be we should Chdir
-	//E.g. in native git this is something like .git/objects/pack/tmp_pack_6bo2La
-	tmpPackFilePath := path.Join(dir, ".git/objects/pack/tmp_pack_incoming")
-	repoFile, err := file.OpenFile(tmpPackFilePath, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0)
+	repoFile, err := repo.GetTmpPackFile()
 	if err != nil {
 		return
 	}
@@ -51,7 +47,7 @@ func runClone(cmd *Command, args []string) (err error) {
 		repoFile.Close()
 		//os.Remove(tmpPackFilePath)
 	}()
-	fmt.Printf("Cloning into '%s'...\n", dir)
+	fmt.Printf("Cloning into '%s'...\n", repo.Name)
 	err = repo.FetchPack(func(dataType byte, data []byte) {
 		/*
 			1 the remainder of the packet line is a chunk of the pack file - this is the payload channel
@@ -76,20 +72,8 @@ func runClone(cmd *Command, args []string) (err error) {
 	if err != nil {
 		return
 	}
-	err = repoFile.Sync()
+	err = repo.SaveLooseObjects(repoFile)
 	if err != nil {
-		return
-	}
-	fi, err := repoFile.Stat()
-	if err != nil {
-		return
-	}
-	packReader, err := git.NewPackReader(io.NewSectionReader(repoFile, 0, fi.Size()))
-	if err != nil {
-		return
-	}
-	err = packReader.SaveLooseObjects()
-	if err != nil && err != io.EOF {
 		return
 	}
 	return

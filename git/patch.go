@@ -1,1 +1,1 @@
-package delta
+package git

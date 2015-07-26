@@ -1,4 +1,4 @@
-package delta
+package git
 
 /*
 The delta compression algorithm that is used in git was originally based on [xdelta](http://xdelta.org/) and [LibXDiff](http://www.xmailserver.org/xdiff-lib.html)

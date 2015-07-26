@@ -1,18 +1,30 @@
 package git
 
 import (
+	"errors"
 	"fmt"
+	"io"
+	"os"
 	"path"
+	"path/filepath"
 	"strings"
+
+	"github.com/tomheng/gogit/internal/file"
 )
 
 type Repo struct {
-	conn *GitConn
-	url  *GitURL
+	conn      *GitConn
+	url       *GitURL
+	ClonePath string
+	Name      string
 }
 
-func NewRepo(addr string) (repo *Repo, err error) {
+func NewRepo(addr, dir string) (repo *Repo, err error) {
 	gitUrl := NewGitURL(addr)
+	_, repoName := path.Split(gitUrl.RepoPath)
+	if len(dir) < 1 {
+		dir = repoName
+	}
 	conn, err := NewGitConn(gitUrl.Host, gitUrl.Port)
 	if err != nil {
 		return
@@ -20,18 +32,22 @@ func NewRepo(addr string) (repo *Repo, err error) {
 	repo = &Repo{
 		conn,
 		gitUrl,
+		dir,
+		repoName,
 	}
 	return
+}
+
+//GetTmpPackFile return clone temp pack file
+//E.g. in native git this is something like .git/objects/pack/tmp_pack_6bo2La
+func (repo *Repo) GetTmpPackFile() (*os.File, error) {
+	filePath := path.Join(repo.ClonePath, ".git/objects/pack/tmp_pack_incoming")
+	return file.OpenFile(filePath, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0)
 }
 
 //distruct repo
 func (repo *Repo) Distruct() {
 	repo.conn.Close()
-}
-
-func (repo *Repo) GetName() string {
-	_, repoName := path.Split(repo.url.RepoPath)
-	return repoName
 }
 
 //https://www.kernel.org/pub/software/scm/git/docs/v1.7.0.5/technical/pack-protocol.txt
@@ -106,6 +122,41 @@ func (repo *Repo) FetchPack(sideBandHandle func(dataType byte, data []byte)) (er
 	}
 	//wait all return
 	return
+}
+
+func (repo *Repo) SaveObject(obj *Object) (err error) {
+	id := obj.GetId()
+	if len(id) < 40 {
+		return errors.New("wrong object id")
+	}
+	filePath := filepath.Join(repo.ClonePath, ".git/objects/", id[:2], id[2:])
+	//fmt.Println(obj)
+	fh, err := file.Create(filePath)
+	if err != nil {
+		return
+	}
+	bs, err := obj.DeflateZlib()
+	if err != nil {
+		return
+	}
+	_, err = fh.Write(bs)
+	if err != nil {
+		return
+	}
+	return
+}
+
+func (repo *Repo) SaveLooseObjects(f *os.File) (err error) {
+	fi, err := f.Stat()
+	if err != nil {
+		return
+	} //The final 20 bytes of the file are a SHA-1 checksum of all the previous data in the file.
+	//Todo: check SHA-1 checksum
+	packReader, err := NewPackReader(io.NewSectionReader(f, 0, fi.Size()-20))
+	if err != nil {
+		return
+	}
+	return packReader.ParseObjects((*repo).SaveObject)
 }
 
 //send cmd to server

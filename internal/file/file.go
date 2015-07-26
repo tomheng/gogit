@@ -23,6 +23,15 @@ func MakeDir(dir string) (err error) {
 	return
 }
 
+func Create(name string) (file *os.File, err error) {
+	dir := path.Dir(name)
+	err = MakeDir(dir)
+	if err != nil {
+		return
+	}
+	return os.Create(name)
+}
+
 //wrap os OpenFile
 func OpenFile(name string, flag int, perm os.FileMode) (file *os.File, err error) {
 	dir := path.Dir(name)

@@ -1,10 +1,6 @@
-package delta
+package git
 
-import (
-	"io"
-
-	"github.com/tomheng/gogit/git"
-)
+import "io"
 
 const (
 	CopySection = iota
@@ -13,12 +9,12 @@ const (
 
 //parse copy or insert section info from delta reader
 func ParseCopyOrInsert(r io.Reader) (stype int, offset, length int64, err error) {
-	b, err := git.ReadOneByte(r)
+	b, err := ReadOneByte(r)
 	if err != nil {
 		return
 	}
 	var _b byte
-	switch git.IsMsbSet(b) {
+	switch IsMsbSet(b) {
 	case true: //copy section
 		stype = CopySection
 		//check last 4 byte
@@ -26,7 +22,7 @@ func ParseCopyOrInsert(r io.Reader) (stype int, offset, length int64, err error)
 			//we should read 1 byte from reader
 			_b = 0
 			if b&(1<<i) != 0 {
-				_b, err = git.ReadOneByte(r)
+				_b, err = ReadOneByte(r)
 				if err != nil {
 					break
 				}
@@ -45,12 +41,12 @@ func ParseCopyOrInsert(r io.Reader) (stype int, offset, length int64, err error)
 	return
 }
 
-func Patch(base io.SectionReader, delta io.Reader, target io.ReadWriter) (err error) {
-	baseLen, err := git.ParseVarLen(delta)
+func PatchDelta(base *io.SectionReader, delta io.Reader, target io.ReadWriter) (err error) {
+	baseLen, err := ParseVarLen(delta)
 	if err != nil {
 		return
 	}
-	targetLen, err := git.ParseVarLen(delta)
+	targetLen, err := ParseVarLen(delta)
 	_ = baseLen
 	_ = targetLen
 	if err != nil {

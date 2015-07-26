@@ -18,7 +18,7 @@ func runLsRemote(cmd *Command, args []string) error {
 	if len(args) < 1 {
 		return errors.New("args not enogh")
 	}
-	repo, err := git.NewRepo(args[0])
+	repo, err := git.NewRepo(args[0], "")
 	if err != nil {
 		return err
 	}

@@ -1,4 +1,4 @@
-package delta
+package git
 
 import (
 	"bytes"
