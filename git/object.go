@@ -111,6 +111,7 @@ func (obj *Object) DeflateZlib() (bs []byte, err error) {
 	zw := zlib.NewWriter(&br)
 	zw.Write(obj.GetStoreHeader())
 	zw.Write(obj.Content)
+	zw.Close()
 	bs = br.Bytes()
 	return
 }
