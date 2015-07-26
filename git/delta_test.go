@@ -56,7 +56,7 @@ func TestParseCopyOrInsert(t *testing.T) {
 			},
 			1258346240,
 			465,
-			CopySection,
+			copySection,
 		},
 		{
 			[]byte{
@@ -68,7 +68,7 @@ func TestParseCopyOrInsert(t *testing.T) {
 			},
 			0,
 			58,
-			InsertSection,
+			insertSection,
 		},
 	}
 	for _, delta := range bs {
