@@ -7,6 +7,12 @@ const (
 	insertSection
 )
 
+type Delta struct {
+	Type    ObjType     //commit, blob, tree, tag
+	Content []byte      //content
+	Base    interface{} //hashid or offset(string or int)
+}
+
 //ParseCopyOrInsert parse copy or insert section info from delta reader
 func ParseCopyOrInsert(r io.Reader) (stype int, offset, length int64, err error) {
 	b, err := ReadOneByte(r)
@@ -42,7 +48,7 @@ func ParseCopyOrInsert(r io.Reader) (stype int, offset, length int64, err error)
 }
 
 //PatchDelta recover real object data
-func PatchDelta(base *io.SectionReader, delta io.Reader, target io.ReadWriter) (err error) {
+func PatchDelta(base io.ReaderAt, delta io.Reader, target io.ReadWriter) (err error) {
 	baseLen, err := ParseVarLen(delta)
 	if err != nil {
 		return

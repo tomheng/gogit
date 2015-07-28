@@ -21,8 +21,9 @@ func IsMsbSet(b byte) bool {
 //PackReader a struct
 type PackReader struct {
 	*io.SectionReader
-	offset               int64
-	Version, ObjectCount uint32
+	offset            int64
+	Version, ObjCount uint32
+	ObjStore          *ObjectStore
 }
 
 //NewPackReader create a pack reader
@@ -34,7 +35,8 @@ func NewPackReader(pack *io.SectionReader) (*PackReader, error) {
 	return &PackReader{
 		SectionReader: pack,
 		Version:       version,
-		ObjectCount:   objectCount,
+		ObjCount:      objectCount,
+		ObjStore:      NewObjectStore(objectCount),
 	}, nil
 }
 
@@ -74,35 +76,34 @@ func ParsePackHeader(pack *io.SectionReader) (version, objectCount uint32, err e
 
 //ParseObjects translate all object in pack reader
 func (pack *PackReader) ParseObjects(f func(object *Object) error) (err error) {
-	for {
-		object, err := pack.ParseObjectEntry()
-		if err == io.EOF {
-			break
-		}
+	for i := uint32(0); i < pack.ObjCount; i++ {
+		obj, offset, err := pack.ParseObjectEntry()
+		//fmt.Println(obj.Type)
+		/*if err == io.EOF {
+			return nil
+		}*/
 		if err != nil {
 			return err
 		}
-		if object == nil || f == nil {
+		if obj == nil || f == nil {
 			continue
 		}
-		err = f(object)
+		err = pack.ObjStore.AddObject(obj, offset)
 		if err != nil {
-			break
+			return err
+		}
+		err = f(obj)
+		if err != nil {
+			return err
 		}
 	}
-	return nil
-}
-
-//Read record the offset
-func (pack *PackReader) Read(p []byte) (n int, err error) {
-	n, err = pack.SectionReader.Read(p)
-	pack.offset += int64(n)
 	return
 }
 
 //Tell tell current cursor on reader
 func (pack *PackReader) Tell() int64 {
-	return pack.offset
+	n, _ := pack.SectionReader.Seek(0, 1)
+	return n
 }
 
 /*ParseObjectEntry parse object from pack reader
@@ -117,30 +118,22 @@ func (pack *PackReader) Tell() int64 {
 	 is an OBJ_OFS_DELTA object
      compressed delta data
 */
-func (pack *PackReader) ParseObjectEntry() (object *Object, err error) {
+func (pack *PackReader) ParseObjectEntry() (obj *Object, offset int64, err error) {
+	offset = pack.Tell()
 	b, err := ReadOneByte(pack)
 	if err != nil {
 		return
 	}
-	//end
-	if b == 0 {
-		return nil, io.EOF
-	}
-	objType := ObjType(b & '\x70' >> 4)
+	objType := ObjType(b & 0x70 >> 4)
 	var (
 		objLen uint64 //unsupport big than uinit64
-		offset int64
-		shift  uint = 4
-		base   []byte
+		//offset int64
+		//shift uint = 4
+		base interface{}
 	)
-	objLen |= uint64(b) & '\x1f'
-	for IsMsbSet(b) {
-		b, err = ReadOneByte(pack)
-		if err != nil {
-			return
-		}
-		objLen |= (uint64(b) & '\x7f') << shift
-		shift += 7
+	objLen |= uint64(b) & 0x0f
+	if IsMsbSet(b) {
+		objLen += readMSBEncodedSize(pack, 4)
 	}
 	switch objType {
 	case OBJ_COMMIT:
@@ -149,34 +142,34 @@ func (pack *PackReader) ParseObjectEntry() (object *Object, err error) {
 	case OBJ_TAG:
 
 	case OBJ_OFS_DELTA:
-		offset, err = ParseVarLen(pack)
-		if err != nil {
-			break
+		// read negative offset
+		binary.Read(pack, binary.BigEndian, &b)
+		noffset := int64(b & 0x7f)
+		for (b & 0x80) != 0 {
+			noffset += 1
+			binary.Read(pack, binary.BigEndian, &b)
+			noffset = (noffset << 7) + int64(b&0x7f)
 		}
-		tmpSectionReader := io.NewSectionReader(pack, pack.Tell()-offset, offset)
-		base, err = InflateZlib(tmpSectionReader)
-		if err != nil {
-			break
-		}
+		base = offset - noffset
 	case OBJ_REF_DELTA: //Todo:maybe we don`t support this
 		tmpID := make([]byte, 20)
 		n, err := pack.Read(tmpID)
 		if err != nil {
-			break
+			return nil, 0, err
 		}
 		if n != 20 {
 			err = errors.New("read less than 20 bytes")
-			break
+			return nil, 0, err
 		}
 		base = tmpID
 	default:
 		//err = errors.New(fmt.Sprintf("unkown object type %d", objType))
 		return
 	}
-	oc, err := InflateZlib(pack.SectionReader)
+	oc, err := InflateZlib(pack.SectionReader, int(objLen))
 	if err != nil {
 		return
 	}
-	object = NewObject(objType, oc, base)
-	return
+	obj, err = NewObject(objType, oc, base)
+	return obj, offset, err
 }

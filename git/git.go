@@ -4,6 +4,8 @@ import (
 	"bufio"
 	"bytes"
 	"compress/zlib"
+	"encoding/binary"
+	"fmt"
 	"io"
 	"net"
 	"net/url"
@@ -44,6 +46,22 @@ func getSupportCapabilities() []string {
 	}
 }
 
+func readMSBEncodedSize(reader io.Reader, initialOffset uint) uint64 {
+	var b byte
+	var sz uint64
+	shift := initialOffset
+	sz = 0
+	for {
+		binary.Read(reader, binary.BigEndian, &b)
+		sz += (uint64(b) &^ 0x80) << shift
+		shift += 7
+		if (b & 0x80) == 0 {
+			break
+		}
+	}
+	return sz
+}
+
 //ParseVarLen parse variable-length integers
 func ParseVarLen(r io.Reader) (len int64, err error) {
 	var shift uint //0
@@ -74,8 +92,29 @@ func ReadOneByte(r io.Reader) (b byte, err error) {
 	return
 }
 
+//reference
+func inflate(reader io.Reader, sz int) ([]byte, error) {
+	zr, err := zlib.NewReader(reader)
+	if err != nil {
+		return nil, fmt.Errorf("error opening packfile's object zlib: %v", err)
+	}
+	buf := make([]byte, sz)
+
+	n, err := zr.Read(buf)
+	if err != nil {
+		return nil, err
+	}
+
+	if n != sz {
+		return nil, fmt.Errorf("inflated size mismatch, expected %d, got %d", sz, n)
+	}
+
+	zr.Close()
+	return buf, nil
+}
+
 //InflateZlib unbuffered io
-func InflateZlib(r *io.SectionReader) (bs []byte, err error) {
+func InflateZlib(r *io.SectionReader, len int) (bs []byte, err error) {
 	var out bytes.Buffer
 	br := bufio.NewReader(r)
 	zr, err := zlib.NewReader(br)
@@ -86,6 +125,9 @@ func InflateZlib(r *io.SectionReader) (bs []byte, err error) {
 	_, err = io.Copy(&out, zr)
 	if err != nil {
 		return
+	}
+	if out.Len() != len {
+		return nil, fmt.Errorf("inflated size mismatch, expected %d, got %d", len, out.Len())
 	}
 	bs = out.Bytes()
 	_, err = r.Seek(0-int64(br.Buffered()), 1)

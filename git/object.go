@@ -6,7 +6,6 @@ import (
 	"crypto/sha1"
 	"encoding/hex"
 	"fmt"
-	"io"
 )
 
 /*
@@ -51,37 +50,49 @@ func (ot ObjType) String() (ts string) {
 	return
 }
 
+//IsDelta check if it it delta object
+func (ot ObjType) IsDelta() bool {
+	return ot == OBJ_OFS_DELTA || ot == OBJ_REF_DELTA
+}
+
 //Object git internal man
 type Object struct {
-	io.Reader
-	ID      string  //SHA-1 40 char
-	Type    ObjType //commit, blob, tree, tag
-	Content []byte  //content
-	//Base    []byte  //delta oject based object
+	ID      string      //SHA-1 40 char
+	Type    ObjType     //commit, blob, tree, tag
+	Content []byte      //content
+	Base    interface{} //hashid or offset(string or int)
 }
 
 //NewObject create object
 //if it is a delta object, we will delating it to real content
-func NewObject(objType ObjType, content, base []byte) *Object {
-	if objType == OBJ_OFS_DELTA || objType == OBJ_REF_DELTA {
-		//brw := bytes.NewBuffer(make([]byte, 1024))
+func NewObject(objType ObjType, content []byte, base interface{}) (obj *Object, err error) {
+	/*if objType == OBJ_OFS_DELTA || objType == OBJ_REF_DELTA {
+		if len(base) < 1 {
+			err = errors.New("delta base error len(0)")
+			return
+		}
 		var brw bytes.Buffer
-		base := bytes.NewReader(base)
-		PatchDelta(io.NewSectionReader(base, 0, int64(base.Len())), bytes.NewReader(content), &brw)
+		baseReader := bytes.NewReader(base)
+		PatchDelta(io.NewSectionReader(baseReader, 0, int64(baseReader.Len())), bytes.NewReader(content), &brw)
 		objType = OBJ_BLOB
 		content = brw.Bytes()
-	}
-	return &Object{
-		//Reader: bytes.NewReader(c),
-		Type: objType,
-		//Base:    b,
+	}*/
+	obj = &Object{
+		Type:    objType,
+		Base:    base,
 		Content: content,
 	}
+	return
+}
+
+//Len get object content len
+func (obj *Object) Len() int {
+	return len(obj.Content)
 }
 
 //GetStoreHeader create a object store header
 func (obj *Object) GetStoreHeader() []byte {
-	return []byte(fmt.Sprintf("%s %d\000", obj.Type, len(obj.Content)))
+	return []byte(fmt.Sprintf("%s %d\000", obj.Type, obj.Len()))
 }
 
 //GetID generate the object id by content
@@ -104,10 +115,19 @@ func (obj *Object) String() string {
 //DeflateZlib deflat the object to bytes
 func (obj *Object) DeflateZlib() (bs []byte, err error) {
 	var br bytes.Buffer
+	data := obj.GetStoreHeader()
+	data = append(data, obj.Content...)
 	zw := zlib.NewWriter(&br)
-	zw.Write(obj.GetStoreHeader())
-	zw.Write(obj.Content)
+	n, err := zw.Write(data)
+	if err != nil {
+		return
+	}
+	if n != len(data) {
+		err = fmt.Errorf("zlib write wrong len expected %d, got %d", len(data), n)
+		return
+	}
 	zw.Close()
+
 	bs = br.Bytes()
 	return
 }
