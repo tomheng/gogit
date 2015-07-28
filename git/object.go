@@ -5,6 +5,7 @@ import (
 	"compress/zlib"
 	"crypto/sha1"
 	"encoding/hex"
+	"errors"
 	"fmt"
 )
 
@@ -100,11 +101,30 @@ func (obj *Object) GetID() (ids string) {
 	if len(obj.ID) > 0 {
 		return obj.ID
 	}
+	return obj.FlushID()
+}
+
+func (obj *Object) FlushID() (ids string) {
 	sw := sha1.New()
 	sw.Write(obj.GetStoreHeader())
 	sw.Write(obj.Content)
 	obj.ID = hex.EncodeToString(sw.Sum(nil))
 	return obj.ID
+}
+
+func (obj *Object) Patch(base *Object) (err error) {
+	if base.Type.IsDelta() {
+		err = errors.New("baseObject is a delta")
+		return
+	}
+	var brw bytes.Buffer
+	err = PatchDelta(bytes.NewReader(base.Content), bytes.NewReader(obj.Content), &brw)
+	if err != nil {
+		return
+	}
+	obj.Type = base.Type
+	obj.Content = brw.Bytes()
+	return
 }
 
 //String make object to be a stringer
@@ -127,7 +147,6 @@ func (obj *Object) DeflateZlib() (bs []byte, err error) {
 		return
 	}
 	zw.Close()
-
 	bs = br.Bytes()
 	return
 }
