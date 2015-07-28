@@ -5,7 +5,6 @@ package git
 import (
 	"errors"
 	"fmt"
-	"io"
 	"os"
 	"path"
 	"path/filepath"
@@ -198,7 +197,8 @@ func (repo *Repo) SaveLooseObjects(f *os.File) (err error) {
 		return
 	} //The final 20 bytes of the file are a SHA-1 checksum of all the previous data in the file.
 	//Todo: check SHA-1 checksum
-	packReader, err := NewPackReader(io.NewSectionReader(f, 0, fi.Size()-20))
+	//packReader, err := NewPackReader(io.NewSectionReader(f, 0, fi.Size()-20))
+	packReader, err := NewPackReader(f, fi.Size())
 	if err != nil {
 		return
 	}

@@ -27,13 +27,14 @@ type PackReader struct {
 }
 
 //NewPackReader create a pack reader
-func NewPackReader(pack *io.SectionReader) (*PackReader, error) {
-	version, objectCount, err := ParsePackHeader(pack)
+func NewPackReader(r io.ReaderAt, size int64) (*PackReader, error) {
+	sr := io.NewSectionReader(r, 0, size-20)
+	version, objectCount, err := ParsePackHeader(sr)
 	if err != nil {
 		return nil, err
 	}
 	return &PackReader{
-		SectionReader: pack,
+		SectionReader: sr,
 		Version:       version,
 		ObjCount:      objectCount,
 		ObjStore:      NewObjectStore(objectCount),
@@ -83,19 +84,24 @@ func (pack *PackReader) ParseObjects(f func(object *Object) error) (err error) {
 			return nil
 		}*/
 		if err != nil {
-			return err
+			break
 		}
 		if obj == nil || f == nil {
 			continue
 		}
 		err = pack.ObjStore.AddObject(obj, offset)
 		if err != nil {
-			return err
+			break
 		}
 		err = f(obj)
 		if err != nil {
-			return err
+			break
 		}
+	}
+	//Todo: check SHA1
+	//check if we reach the end of reader
+	if pack.Tell() < pack.Size() {
+		return errors.New("pack has junk at the end")
 	}
 	return
 }
@@ -163,7 +169,7 @@ func (pack *PackReader) ParseObjectEntry() (obj *Object, offset int64, err error
 		}
 		base = tmpID
 	default:
-		//err = errors.New(fmt.Sprintf("unkown object type %d", objType))
+		err = errors.New(fmt.Sprintf("unkown object type %d", objType))
 		return
 	}
 	oc, err := InflateZlib(pack.SectionReader, int(objLen))
