@@ -2,6 +2,7 @@ package git
 
 import (
 	"encoding/binary"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"io"
@@ -84,24 +85,27 @@ func (pack *PackReader) ParseObjects(f func(object *Object) error) (err error) {
 			return nil
 		}*/
 		if err != nil {
-			break
-		}
-		if obj == nil || f == nil {
-			continue
+			return err
 		}
 		err = pack.ObjStore.AddObject(obj, offset)
 		if err != nil {
-			break
-		}
-		err = f(obj)
-		if err != nil {
-			break
+			return err
 		}
 	}
 	//Todo: check SHA1
 	//check if we reach the end of reader
 	if pack.Tell() < pack.Size() {
+		fmt.Println(pack.Tell(), ":", pack.Size())
 		return errors.New("pack has junk at the end")
+	}
+	if f == nil {
+		return
+	}
+	for _, obj := range pack.ObjStore.List {
+		err = f(obj)
+		if err != nil {
+			return err
+		}
 	}
 	return
 }
@@ -167,7 +171,7 @@ func (pack *PackReader) ParseObjectEntry() (obj *Object, offset int64, err error
 			err = errors.New("read less than 20 bytes")
 			return nil, 0, err
 		}
-		base = tmpID
+		base = hex.EncodeToString(tmpID)
 	default:
 		err = errors.New(fmt.Sprintf("unkown object type %d", objType))
 		return

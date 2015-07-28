@@ -1,67 +1,87 @@
 package git
 
-import (
-	"bytes"
-	"errors"
-)
+import "errors"
 
 type ObjectStore struct {
 	List        []*Object
 	offsetIndex map[int64]int
 	hashIndex   map[string]int
+	refDeltas   map[string]int
 }
 
 //AddObject add object to pack object list
 func (objStore *ObjectStore) AddObject(obj *Object, offset int64) (err error) {
-	if obj.Type.IsDelta() {
-		//may be we should parse delta object here
-		err := objStore.ParseDelta(obj)
+	index := objStore.addObject(obj, offset)
+	switch obj.Type {
+	case OBJ_OFS_DELTA:
+		offset, ok := obj.Base.(int64)
+		if !ok {
+			return errors.New("base should be int64 offset")
+		}
+		base := objStore.FindByOffset(offset)
+		if base == nil {
+			return errors.New("ofs_delta base object can not be nil")
+		}
+		err = obj.Patch(base)
 		if err != nil {
-			//break
+			return
+		}
+	case OBJ_REF_DELTA:
+		id, ok := obj.Base.(string)
+		if !ok {
+			return errors.New("base should be string hash id")
+		}
+		base := objStore.FindByHash(id)
+		if base == nil {
+			objStore.refDeltas[id] = index
+		} else {
+			err = obj.Patch(base)
+			if err != nil {
+				return
+			}
 		}
 	}
+	return objStore.checkDepDelta(obj)
+}
+
+//addObject add a object internal
+func (objStore *ObjectStore) addObject(obj *Object, offset int64) (index int) {
 	id := obj.GetID()
-	index := len(objStore.List) - 1
-	objStore.List[index] = obj
+	objStore.List = append(objStore.List, obj)
+	index = len(objStore.List) - 1
 	objStore.hashIndex[id] = index
 	objStore.offsetIndex[offset] = index
 	return
 }
 
-func (objStore *ObjectStore) ParseDelta(delta *Object) (err error) {
-	//find base object
-	//patch it to real object
-	var baseObject *Object
-	switch delta.Type {
-	case OBJ_OFS_DELTA:
-		offset, ok := delta.Base.(int64)
-		if !ok {
-			err = errors.New("base should be int64 offset")
-			return
-		}
-		baseObject = objStore.FindByOffset(offset)
-	case OBJ_REF_DELTA:
-		id, ok := delta.Base.(string)
-		if !ok {
-			err = errors.New("base should be string hash id")
-			return
-		}
-		baseObject = objStore.FindByHash(id)
-	}
-	if baseObject == nil {
-		err = errors.New("baseObject is nil")
+func (objStore *ObjectStore) updateObject(index int, obj *Object) {
+	id := obj.FlushID()
+	objStore.List[index] = obj
+	objStore.hashIndex[id] = index
+}
+
+//checkDepDelta check delta object base on
+func (objStore *ObjectStore) checkDepDelta(obj *Object) (err error) {
+	if obj.Type.IsDelta() {
 		return
 	}
-	var brw bytes.Buffer
-	err = PatchDelta(bytes.NewReader(baseObject.Content), bytes.NewReader(delta.Content), &brw)
+	index, ok := objStore.refDeltas[obj.GetID()]
+	if !ok {
+		return
+	}
+	delta := objStore.List[index]
+	err = delta.Patch(obj)
 	if err != nil {
 		return
 	}
-	delta.Type = baseObject.Type
-	delta.Content = brw.Bytes()
-	return
+	if delta.Type.IsDelta() {
+		return
+	}
+	objStore.updateObject(index, obj)
+	return objStore.checkDepDelta(delta)
 }
 
+//FindByOffset find object by offset
 func (objStore *ObjectStore) FindByOffset(offset int64) (obj *Object) {
 	index, ok := objStore.offsetIndex[offset]
 	if !ok {
@@ -70,6 +90,7 @@ func (objStore *ObjectStore) FindByOffset(offset int64) (obj *Object) {
 	return objStore.List[index]
 }
 
+//FindByHash find object by hash id
 func (objStore *ObjectStore) FindByHash(hash string) (obj *Object) {
 	index, ok := objStore.hashIndex[hash]
 	if !ok {
@@ -78,11 +99,13 @@ func (objStore *ObjectStore) FindByHash(hash string) (obj *Object) {
 	return objStore.List[index]
 }
 
+//NewObjectStore create it
 func NewObjectStore(count uint32) *ObjectStore {
-	objList := make([]*Object, count)
+	//objList := make([]*Object, count)
 	return &ObjectStore{
-		objList,
-		make(map[int64]int, count/2),
-		make(map[string]int, count/2),
+		make([]*Object, 0),
+		make(map[int64]int),
+		make(map[string]int),
+		make(map[string]int),
 	}
 }
