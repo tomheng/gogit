@@ -1,3 +1,4 @@
+//Clone a repository into a different directory that does not yet exist.
 package main
 
 import (
