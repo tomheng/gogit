@@ -57,7 +57,7 @@ func (objStore *ObjectStore) ParseDelta(delta *Object) (err error) {
 	if err != nil {
 		return
 	}
-	delta.Type = OBJ_BLOB
+	delta.Type = baseObject.Type
 	delta.Content = brw.Bytes()
 	return
 }
