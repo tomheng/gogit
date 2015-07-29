@@ -1,9 +1,9 @@
-# gogit
+# Gogit
 
 Gogit is a go git in golang from bottom-up. It is just a golang programing ***excercise***.
 
 
-# Start
+# Quick Start
 
 it is very easy to have a try, just use it as git, replacing git to gogit in your cmd.
 
@@ -12,11 +12,13 @@ go get github.com/tomheng/gogit
 gogit ls git://github.com/tomheng/gogit
 ~~~
 
-#Command
+# Commands
+
+1. Supported
 
 * gogit ls-remote (partial function)
 
-commands below is on the way.
+2. on the way
 
 * git cat-file
 * git ls-tree
