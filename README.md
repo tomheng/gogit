@@ -16,32 +16,32 @@ gogit ls git://github.com/tomheng/gogit
 
 1. Supported
 
-* gogit ls-remote (partial function)
+	* gogit ls-remote (partial function)
 
 2. on the way
 
-* git cat-file
-* git ls-tree
-* git clone
-* git gc
-* git daemon
-* git hash-object
-* git write-tree
-* git checkout
-* git branch
-* git show-branch
-* git unpack-objects
-* git reset
-* git add
-* git commit
-* git pull
-* git push
-* git symbolic-ref
-* git update-ref
-* git commit-tree
-* git unpack-objects
-* git rev-list
-* git rev-parse
+	* git cat-file
+	* git ls-tree
+	* git clone
+	* git gc
+	* git daemon
+	* git hash-object
+	* git write-tree
+	* git checkout
+	* git branch
+	* git show-branch
+	* git unpack-objects
+	* git reset
+	* git add
+	* git commit
+	* git pull
+	* git push
+	* git symbolic-ref
+	* git update-ref
+	* git commit-tree
+	* git unpack-objects
+	* git rev-list
+	* git rev-parse
 
 #Reference
 
