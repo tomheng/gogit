@@ -104,6 +104,8 @@ func (obj *Object) GetID() (ids string) {
 	return obj.FlushID()
 }
 
+//FlushID flush object id 
+//please call it when change object content or object type
 func (obj *Object) FlushID() (ids string) {
 	sw := sha1.New()
 	sw.Write(obj.GetStoreHeader())
@@ -112,6 +114,7 @@ func (obj *Object) FlushID() (ids string) {
 	return obj.ID
 }
 
+//Patch delta obj
 func (obj *Object) Patch(base *Object) (err error) {
 	if base.Type.IsDelta() {
 		err = errors.New("baseObject is a delta")
