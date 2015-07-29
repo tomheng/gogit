@@ -3,19 +3,43 @@
 Gogit is a go git in golang from bottom-up. It is just a golang programing ***excercise***.
 
 
-# Install
+# Start
+
+it is very easy to have a try, just use it as git, replacing git to gogit in your cmd.
 
 ~~~bash
 go get github.com/tomheng/gogit
+gogit ls git://github.com/tomheng/gogit
 ~~~
 
-#Support cmd(git)
+#Command
 
-###partial functional
-* gogit ls-remote
+* gogit ls-remote (partial function)
 
-###full functional
+commands below is on the way.
 
+* git cat-file
+* git ls-tree
+* git clone
+* git gc
+* git daemon
+* git hash-object
+* git write-tree
+* git checkout
+* git branch
+* git show-branch
+* git unpack-objects
+* git reset
+* git add
+* git commit
+* git pull
+* git push
+* git symbolic-ref
+* git update-ref
+* git commit-tree
+* git unpack-objects
+* git rev-list
+* git rev-parse
 
 #Reference
 
@@ -24,8 +48,8 @@ go get github.com/tomheng/gogit
 * [git clone in haskell from the bottom up](http://stefan.saasen.me/articles/git-clone-in-haskell-from-the-bottom-up)
 * [git source code](https://github.com/git/git)
 * [File System Support for Delta Compression](http://mail.xmailserver.net/xdfs.pdf)
-* [gigot](https://github.com/remyoudompheng/gigot)
-* [Gitgo](https://github.com/ChimeraCoder/gitgo/)
+* [remyoudompheng gigot](https://github.com/remyoudompheng/gigot)
+* [ChimeraCoder Gitgo](https://github.com/ChimeraCoder/gitgo/)
 * [Decentralized, peer-to-peer Git repositories aka "Git meets Bitcoin"](https://github.com/gitchain/gitchain)
 
 #License
