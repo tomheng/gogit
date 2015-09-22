@@ -9,7 +9,7 @@ it is very easy to have a try, just use it as git, replacing git to gogit in you
 
 ~~~bash
 go get github.com/tomheng/gogit
-gogit ls git://github.com/tomheng/gogit
+gogit ls-remote git://github.com/tomheng/gogit
 ~~~
 
 # Commands
@@ -53,6 +53,7 @@ gogit ls git://github.com/tomheng/gogit
 * [remyoudompheng gigot](https://github.com/remyoudompheng/gigot)
 * [ChimeraCoder Gitgo](https://github.com/ChimeraCoder/gitgo/)
 * [Decentralized, peer-to-peer Git repositories aka "Git meets Bitcoin"](https://github.com/gitchain/gitchain)
+* [Git Magic(in chinese)](http://www-cs-students.stanford.edu/~blynn/gitmagic/intl/zh_cn/index.html)
 
 #License
 Gogit is primarily distributed under the terms of both the MIT license.
